@@ -1,4 +1,5 @@
 syntax on
+
 set scrolloff=10
 
 set background=dark
@@ -28,7 +29,7 @@ set nohlsearch
 set incsearch
 set t_Co=256
 set encoding=UTF-8
-set completefunc=emoji#complete
+set completeopt=menu,menuone,noselect
 
 call plug#begin('~/.vim/plugged')
 Plug 'kristijanhusak/defx-git'
@@ -59,9 +60,22 @@ Plug 'dmerejkowsky/vim-ale'
 Plug 'sonph/onehalf', { 'rtp': 'vim' }
 Plug 'mcchrish/zenbones.nvim'
 if has("nvim")
-  Plug 'kabouzeid/nvim-lspinstall'
+  Plug 'williamboman/nvim-lsp-installer'
   Plug 'cocopon/iceberg.vim'
   Plug 'Drogglbecher/vim-moonscape'
+  Plug 'rust-lang/rust.vim'
+  Plug 'neovim/nvim-lspconfig'
+  Plug 'hrsh7th/cmp-nvim-lsp'
+  Plug 'saadparwaiz1/cmp_luasnip' 
+  Plug 'hrsh7th/cmp-buffer'
+  Plug 'hrsh7th/cmp-nvim-lua'
+  Plug 'hrsh7th/cmp-path'
+  Plug 'hrsh7th/cmp-cmdline'
+  Plug 'hrsh7th/nvim-cmp'
+  Plug 'hrsh7th/vim-vsnip'
+  Plug 'jose-elias-alvarez/null-ls.nvim'
+  Plug 'hrsh7th/vim-vsnip-integ'
+  Plug 'L3MON4D3/LuaSnip'
   Plug 'glepnir/spaceline.vim'
   Plug 'dylanaraps/wal.vim'
   Plug 'gruvbox-community/gruvbox'
@@ -85,7 +99,6 @@ if has("nvim")
   Plug 'mangeshrex/uwu.vim'
   Plug 'ryanoasis/vim-devicons'
   Plug 'glepnir/lspsaga.nvim'
-  Plug 'hrsh7th/nvim-compe'
   Plug 'p00f/nvim-ts-rainbow'
   Plug 'folke/tokyonight.nvim'
   Plug 'tjdevries/gruvbuddy.nvim'
@@ -99,10 +112,11 @@ Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 Plug 'nvim-treesitter/playground'
 call plug#end()
 
-luafile ~/.config/nvim/compe-config.lua
-luafile ~/.config/nvim/javascript-lsp.lua
-"luafile ~/.config/nvim/evil_lualine.lua
-luafile ~/.config/nvim/nvimtree.lua
+lua require "user.lsp"
+lua require "user.cmp"
+lua require "user.nvimtree"
+
+"lua require'nvim-tree'.setup {}
 
 let g:spaceline_seperate_style = 'arrow-fade'
 
@@ -163,24 +177,19 @@ catppuccin.setup(
 			vim_sneak = false,
 			fern = false,
 			barbar = false,
-			bufferline = false,
-			markdown = false,
+			bufferline = false, markdown = false,
 			lightspeed = false,
 			ts_rainbow = true,
 			hop = false,
-		},
+	},
 	}
 )
 EOF
 
 let g:tokyonight_style = "night"
 
-"colorscheme onehalflight
-"colorscheme catppuccin 
-"colorscheme embark
-"colorscheme gruvbox
-"colorscheme jellybeans
-colorscheme everforest
+colorscheme catppuccin 
+"colorscheme everforest
 
 let g:everforest_background = 'dark'
 
@@ -246,6 +255,66 @@ require'nvim-treesitter.configs'.setup {
 EOF
 
 
+lua << EOF
+  -- Setup nvim-cmp.
+  local cmp = require'cmp'
+
+  cmp.setup({
+    snippet = {
+      -- REQUIRED - you must specify a snippet engine
+      expand = function(args)
+        vim.fn["vsnip#anonymous"](args.body) -- For `vsnip` users.
+        -- require('luasnip').lsp_expand(args.body) -- For `luasnip` users.
+        -- require('snippy').expand_snippet(args.body) -- For `snippy` users.
+        -- vim.fn["UltiSnips#Anon"](args.body) -- For `ultisnips` users.
+      end,
+    },
+    mapping = {
+      ['<C-b>'] = cmp.mapping(cmp.mapping.scroll_docs(-4), { 'i', 'c' }),
+      ['<C-f>'] = cmp.mapping(cmp.mapping.scroll_docs(4), { 'i', 'c' }),
+      ['<C-Space>'] = cmp.mapping(cmp.mapping.complete(), { 'i', 'c' }),
+      ['<C-y>'] = cmp.config.disable, -- Specify `cmp.config.disable` if you want to remove the default `<C-y>` mapping.
+      ['<C-e>'] = cmp.mapping({
+        i = cmp.mapping.abort(),
+        c = cmp.mapping.close(),
+      }),
+      ['<CR>'] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+    },
+    sources = cmp.config.sources({
+      { name = 'nvim_lsp' },
+      { name = 'vsnip' }, -- For vsnip users.
+      -- { name = 'luasnip' }, -- For luasnip users.
+      -- { name = 'ultisnips' }, -- For ultisnips users.
+      -- { name = 'snippy' }, -- For snippy users.
+    }, {
+      { name = 'buffer' },
+    })
+  })
+
+  -- Use buffer source for `/` (if you enabled `native_menu`, this won't work anymore).
+  cmp.setup.cmdline('/', {
+    sources = {
+      { name = 'buffer' }
+    }
+  })
+
+  -- Use cmdline & path source for ':' (if you enabled `native_menu`, this won't work anymore).
+  cmp.setup.cmdline(':', {
+    sources = cmp.config.sources({
+      { name = 'path' }
+    }, {
+      { name = 'cmdline' }
+    })
+  })
+
+  -- Setup lspconfig.
+  local capabilities = require('cmp_nvim_lsp').update_capabilities(vim.lsp.protocol.make_client_capabilities())
+  -- Replace <YOUR_LSP_SERVER> with each lsp server you've enabled.
+  require('lspconfig')['tsserver'].setup {
+    capabilities = capabilities
+  }
+EOF
+
 "Haskell
 let g:haskell_enable_quantification = 1
 let g:haskell_enable_recursivedo = 1
@@ -254,4 +323,3 @@ let g:haskell_enable_pattern_synonyms = 1
 let g:haskell_enable_typeroles = 1
 let g:haskell_enable_static_pointers = 1
 let g:haskell_backpack = 1
-
